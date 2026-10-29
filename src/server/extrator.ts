@@ -1,13 +1,12 @@
-import PDFDocument from 'pdfkit';
 import fs from "node:fs"
 
-export default function Extrator(file:string, fileSize:number){
+export default function Extrator(file:string){
     
     try {
         const arquivo = fs.readFileSync(file)
         const tamanhoArquivo = arquivo.length
 
-        return arquivo
+        return tamanhoArquivo
 
     } catch(error){
         console.log(error)
