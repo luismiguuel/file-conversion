@@ -1,20 +1,27 @@
-
 import * as net from 'node:net';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+const RAIZ_PROJETO = path.resolve(import.meta.dirname, '../..');
+const PASTA_SAIDA = path.resolve(RAIZ_PROJETO, 'convertidos');
+
 export default function conectarServidor(
     fileName: string,
-    outputPath: string,
     host: string,
     port: number
 ): Promise<void> {
 
     return new Promise((resolve, reject) => {
+        const caminhoArquivo = path.resolve(RAIZ_PROJETO, fileName);
+        const nomeArquivo = path.basename(caminhoArquivo);
+        const nomePDF = `${path.parse(nomeArquivo).name}.pdf`;
+        const caminhoPDF = path.join(PASTA_SAIDA, nomePDF);
+
         const socket = net.createConnection({ host, port });
 
         type Etapa =
             | 'AGUARDANDO_ACEITE'
+            | 'ENVIANDO_ARQUIVO'
             | 'RECEBENDO_PDF'
             | 'CONCLUIDO';
 
@@ -23,7 +30,6 @@ export default function conectarServidor(
         let tamanhoPDF: number | null = null;
         let dadosPDF = Buffer.alloc(0);
         let finalizado = false;
-        let recebimentoCompleto = false;
 
         const falhar = (erro: Error) => {
             if (finalizado) return;
@@ -35,25 +41,29 @@ export default function conectarServidor(
 
         const enviarArquivo = async () => {
             try {
-                const arquivo = await fs.promises.readFile(fileName);
+                const arquivo = await fs.promises.readFile(caminhoArquivo);
 
                 const tamanhoArquivo = Buffer.alloc(4);
                 tamanhoArquivo.writeUInt32BE(arquivo.length);
 
-                const transferencia = Buffer.concat([
+                etapa = 'ENVIANDO_ARQUIVO';
+
+                socket.write(Buffer.concat([
                     tamanhoArquivo,
                     arquivo
-                ]);
-
-                etapa = 'RECEBENDO_PDF';
-
-                socket.write(transferencia);
+                ]));
 
                 console.log('Arquivo enviado ao servidor!');
                 console.log('Aguardando conversão...');
 
+                etapa = 'RECEBENDO_PDF';
+
             } catch (error) {
-                falhar(error instanceof Error ? error : new Error(String(error)));
+                falhar(
+                    error instanceof Error
+                        ? error
+                        : new Error(String(error))
+                );
             }
         };
 
@@ -73,24 +83,28 @@ export default function conectarServidor(
             }
 
             if (dadosPDF.length === tamanhoPDF) {
-                recebimentoCompleto = true
+                etapa = 'CONCLUIDO';
+
                 try {
-                    await fs.promises.mkdir(path.dirname(outputPath), {
+                    await fs.promises.mkdir(PASTA_SAIDA, {
                         recursive: true
                     });
 
-                    await fs.promises.writeFile(outputPath, dadosPDF);
+                    await fs.promises.writeFile(caminhoPDF, dadosPDF);
 
                     finalizado = true;
-                    etapa = 'CONCLUIDO';
 
-                    console.log(`PDF salvo em: ${outputPath}`);
+                    console.log(`PDF salvo em: ${caminhoPDF}`);
 
                     socket.end();
                     resolve();
 
                 } catch (error) {
-                    falhar(error instanceof Error ? error : new Error(String(error)));
+                    falhar(
+                        error instanceof Error
+                            ? error
+                            : new Error(String(error))
+                    );
                 }
             }
         };
@@ -98,7 +112,7 @@ export default function conectarServidor(
         socket.on('connect', () => {
             console.log('Conectado ao servidor!');
 
-            socket.write(`CONVERT txt pdf ${path.basename(fileName)}\n`);
+            socket.write(`CONVERT txt pdf ${nomeArquivo}\n`);
         });
 
         socket.on('data', (dados: Buffer) => {
@@ -113,8 +127,6 @@ export default function conectarServidor(
 
                 if (mensagem === 'ACCEPT') {
                     console.log('Solicitação aceita pelo servidor!');
-
-                    etapa = 'RECEBENDO_PDF';
 
                     void enviarArquivo();
                     return;
@@ -136,8 +148,13 @@ export default function conectarServidor(
         socket.on('close', () => {
             console.log('Conexão encerrada.');
 
-            if (!finalizado && !recebimentoCompleto) {
-                falhar(new Error('Conexão encerrada antes da conclusão da transferência.'));
+            if (!finalizado && etapa !== 'CONCLUIDO') {
+                falhar(
+                    new Error(
+                        'Conexão encerrada antes da conclusão da transferência.'
+                    )
+                );
+                return;
             }
         });
     });

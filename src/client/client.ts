@@ -24,13 +24,8 @@ try {
         'Insira o nome do arquivo com .txt no final: '
     );
 
-    const outputPath = await perguntar(
-        'Insira o caminho completo para salvar o PDF: '
-    );
-
     await conectarServidor(
         fileName,
-        outputPath,
         HOST,
         PORT
     );
