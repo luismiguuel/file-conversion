@@ -1,28 +1,44 @@
-import * as net from 'net';
-import * as fs from 'fs';
-import * as readline from 'readline'
 
+import * as readline from 'node:readline';
+import conectarServidor from './connect.js';
 
 const HOST = '127.0.0.1';
-const PORT = '5000';
+const PORT = 5000;
 
 const rl = readline.createInterface({
-    input : process.stdin,
+    input: process.stdin,
     output: process.stdout
-})
+});
 
-console.log("BEM VINDO AO CONVERSOR 2000: TXT PARA PDF")
-console.log("---------------------------------------")
-console.log("")
-const fileName = await new Promise<string>((resolve) => rl.question("Insira o nome do arquivo, juntamente do formato .txt no final (Ex.: resposta.txt): ", (resposta: string) => {
-    console.log("Nome infomado!")
-    resolve(resposta)
-    rl.close()
-}))
+function perguntar(pergunta: string): Promise<string> {
+    return new Promise((resolve) => {
+        rl.question(pergunta, resolve);
+    });
+}
 
-const outputPath = await new Promise<string>((resolve) => rl.question("Caminho: ", (resposta) => {
-    console.log("Caminho informado!")
-    resolve(resposta)
-    rl.close()
-}))
+console.log('BEM VINDO AO CONVERSOR 2000: TXT PARA PDF');
+console.log('---------------------------------------');
 
+try {
+    const fileName = await perguntar(
+        'Insira o nome do arquivo com .txt no final: '
+    );
+
+    const outputPath = await perguntar(
+        'Insira o caminho completo para salvar o PDF: '
+    );
+
+    await conectarServidor(
+        fileName,
+        outputPath,
+        HOST,
+        PORT
+    );
+
+    console.log('Conversão finalizada com sucesso!');
+
+} catch (error) {
+    console.error('Erro na solicitação:', error);
+} finally {
+    rl.close();
+}
