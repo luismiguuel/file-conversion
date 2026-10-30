@@ -120,17 +120,3 @@ file-conversion/
 ```
 
 As pastas `temp/` e `convertidos/` são utilizadas durante a execução, conforme necessário. Não é preciso gerar a pasta `dist/` para rodar o projeto.
-
-## Problemas comuns
-
-- **`ECONNREFUSED 127.0.0.1:5000`:** verifique se o servidor está em execução antes de iniciar o cliente.
-- **`Cannot find module ...`:** execute `npm install` e verifique se a dependência `tsx` está instalada e os scripts estão configurados no `package.json`.
-- **Arquivo não encontrado (`ENOENT`):** coloque o `.txt` na raiz do projeto e informe seu nome corretamente.
-- **Porta 5000 já utilizada:** encerre o processo que está usando a porta ou ajuste `HOST`/`PORT` nos arquivos do cliente e servidor.
-- **Conversão não suportada:** o projeto implementa exclusivamente a conversão de `txt` para `pdf`.
-
-## Limitações atuais
-
-- O endereço do servidor e a porta estão fixos em `127.0.0.1:5000`, portanto o projeto está configurado por padrão para execução local. Para utilizá-lo entre máquinas diferentes, é necessário ajustar os endereços e permitir a conexão na rede.
-- A interface do cliente realiza uma conversão por execução.
-- Os arquivos de texto são interpretados como UTF-8 e convertidos para um PDF de texto simples; não há preservação de formatação avançada.
